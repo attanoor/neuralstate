@@ -1,0 +1,23 @@
+<tr id="ev-{{ e.id }}" {% if e.reverted %}class="reverted"{% endif %}>
+  <td data-label="#">{{ e.id }}</td>
+  <td data-label="When">{{ e.created_at | when }}</td>
+  <td data-label="Change"><code>{{ e.op }}</code> <span class="muted">{{ e.target_type }}</span>
+    {% if e.target_type == "nodes" %}<a href="#" hx-get="/ui/nodes/{{ e.target_id }}" hx-target="#ev-detail-{{ e.id }}">view</a>{% endif %}
+  </td>
+  <td data-label="Detail">
+    {% if e.note %}{{ e.note }}{% endif %}
+    {% if e.before or e.after %}
+      <details><summary>before / after</summary>
+        <div class="diff"><pre>{{ e.before | tojson_pretty }}</pre><pre>{{ e.after | tojson_pretty }}</pre></div>
+      </details>
+    {% endif %}
+    <div id="ev-detail-{{ e.id }}"></div>
+  </td>
+  <td data-label="Action" class="actions">
+    {% if e.reverted %}<span class="badge disabled">reverted</span>
+    {% elif e.op != "revert" and e.target_type in ("nodes", "episodes", "heuristic_rules") %}
+      <button class="btn danger" hx-post="/ui/events/{{ e.id }}/revert" hx-target="closest tr" hx-swap="outerHTML"
+              hx-confirm="Revert event #{{ e.id }} ({{ e.op }})?">Revert</button>
+    {% endif %}
+  </td>
+</tr>

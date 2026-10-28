@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Rules · {{ agent.name }} · NeuralState{% endblock %}
+{% block content %}
+<h1>Learned rules</h1>
+<p class="muted">Synthesized from repeated failures. Effectiveness counts outcomes of episodes where the rule was in the agent's context; rules that keep failing retire automatically.</p>
+{% set base = "/ui/rules?agent=" ~ (agent.name | urlencode) %}
+<nav class="filters" aria-label="Filter by status">
+  <a href="{{ base }}" {% if not status %}aria-current="true"{% endif %}>All</a>
+  {% for s in ["active", "disabled", "archived"] %}
+    <a href="{{ base }}&status={{ s }}" {% if status == s %}aria-current="true"{% endif %}>{{ s }}</a>
+  {% endfor %}
+</nav>
+{% if rules %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th scope="col">Rule</th><th scope="col">Task type</th><th scope="col">Evidence</th>
+          <th scope="col">Effectiveness</th><th scope="col">Confidence</th><th scope="col">Status</th><th scope="col"><span class="muted">Action</span></th></tr>
+    </thead>
+    <tbody>
+      {% for rule in rules %}{% include "_rule_row.html" %}{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div class="card empty">No rules {{ "with this status " if status }}yet. They appear once several similar failures have been consolidated.</div>
+{% endif %}
+{% endblock %}

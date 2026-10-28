@@ -1,0 +1,32 @@
+<tr id="rule-{{ rule.id }}">
+  <td data-label="Rule">
+    <dl class="rule-text">
+      <dt>When</dt><dd>{{ rule.condition }}</dd>
+      <dt>Avoid</dt><dd>{{ rule.avoid }}</dd>
+      <dt>Instead</dt><dd>{{ rule.action }}</dd>
+    </dl>
+    <details><summary>Why, and the evidence</summary>
+      <p>{{ rule.rationale }}</p>
+      <div hx-get="/ui/nodes/{{ rule.id }}" hx-trigger="toggle from:closest details once" hx-swap="innerHTML">
+        <span class="muted">Loading…</span>
+      </div>
+    </details>
+  </td>
+  <td data-label="Task type">{{ rule.task_type or "any" }}</td>
+  <td data-label="Evidence">{{ rule.evidence_count }} failures</td>
+  <td data-label="Effectiveness">
+    {{ rule.effectiveness | pct }}
+    <small class="muted">({{ rule.success_after }}✓ / {{ rule.failure_after }}✗)</small>
+  </td>
+  <td data-label="Confidence"><span class="meter"><i style="inline-size: {{ rule.confidence | pct }}"></i></span> {{ rule.confidence | pct }}</td>
+  <td data-label="Status"><span class="badge {{ rule.status }}">{{ rule.status }}</span></td>
+  <td data-label="Action" class="actions">
+    {% if rule.status == "active" %}
+      <button class="btn danger" hx-post="/ui/rules/{{ rule.id }}/status" hx-vals='{"status": "disabled"}'
+              hx-target="closest tr" hx-swap="outerHTML">Disable</button>
+    {% else %}
+      <button class="btn" hx-post="/ui/rules/{{ rule.id }}/status" hx-vals='{"status": "active"}'
+              hx-target="closest tr" hx-swap="outerHTML">Enable</button>
+    {% endif %}
+  </td>
+</tr>

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Review queue · {{ agent.name }} · NeuralState{% endblock %}
+{% block content %}
+<h1>Contradictions</h1>
+<p class="muted">Close calls wait here. Nothing blocks on this queue: each cycle re-scores pending pairs and settles them once one side gains enough evidence. You can decide sooner.</p>
+{% set base = "/ui/review?agent=" ~ (agent.name | urlencode) %}
+<nav class="filters" aria-label="Filter by status">
+  {% for s, label in [("pending", "Pending"), ("auto", "Auto-resolved"), ("resolved", "Resolved by operator")] %}
+    <a href="{{ base }}&status={{ s }}" {% if status == s %}aria-current="true"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+{% for c in items %}
+  <article class="card review-item" id="c-{{ c.id }}">
+    <div class="vs">
+      {% for side, n in [("a", c.a), ("b", c.b)] %}
+        {% if not loop.first %}<div class="or">vs</div>{% endif %}
+        <div>
+          <strong>{{ n.label if n else "(deleted)" }}</strong>
+          {% if n %}
+            <p class="muted">{{ n.evidence_count }} evidence · confidence {{ n.confidence | pct }} · last seen {{ n.last_evidence_at | when }}
+              {% if c.winner_id == n.id %}<span class="badge active">winner</span>{% endif %}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <p class="muted">{{ c.reason }} · margin {{ c.margin }}{% if c.resolution %} · {{ c.resolution }}{% endif %}</p>
+    {% if c.status == "pending" %}
+      <form class="buttons" hx-post="/ui/review/{{ c.id }}/resolve" hx-target="#c-{{ c.id }}" hx-swap="outerHTML">
+        <button class="btn" name="winner" value="a">Keep left</button>
+        <button class="btn" name="winner" value="b">Keep right</button>
+        <button class="btn" name="winner" value="both">Both are true</button>
+      </form>
+    {% endif %}
+  </article>
+{% else %}
+  <div class="card empty">Nothing here.</div>
+{% endfor %}
+{% endblock %}

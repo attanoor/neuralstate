@@ -1,0 +1,38 @@
+<h2 style="margin-top: 0">{{ node.label }}</h2>
+<p>
+  <span class="badge {{ node.kind }}">{{ node.kind }}</span>
+  <span class="badge {{ node.status }}">{{ node.status | replace("_", " ") }}</span>
+</p>
+<p class="muted">
+  Confidence <span class="meter"><i style="inline-size: {{ node.confidence | pct }}"></i></span> {{ node.confidence | pct }}
+  · {{ node.evidence_count }} evidence · recalled {{ node.access_count }}×
+</p>
+{% if node.kind == "rule" %}
+  <dl class="rule-text">
+    <dt>When</dt><dd>{{ node.condition }}</dd>
+    <dt>Avoid</dt><dd>{{ node.avoid }}</dd>
+    <dt>Instead</dt><dd>{{ node.action }}</dd>
+    <dt>Why</dt><dd>{{ node.rationale }}</dd>
+  </dl>
+{% elif node.body %}<p>{{ node.body }}</p>{% endif %}
+
+<h3>Evidence ({{ node.evidence | length }})</h3>
+{% for e in node.evidence %}
+  <p>
+    <span class="badge {{ e.outcome }}">{{ e.outcome }}</span>
+    {% if e.role == "contradicts" %}<span class="badge failure">contradicts</span>{% endif %}
+    {{ e.summary | short(140) }}
+    {% if e.outcome_detail %}<br><span class="muted">{{ e.outcome_detail | short(140) }}</span>{% endif %}
+    <br><small class="muted">{{ e.created_at | when }}{% if e.task_type %} · {{ e.task_type }}{% endif %}</small>
+  </p>
+{% else %}
+  <p class="muted">No linked episodes.</p>
+{% endfor %}
+
+<h3>History</h3>
+{% for h in node.history %}
+  <p><code>{{ h.op }}</code> <small class="muted">{{ h.created_at | when }}</small>{% if h.reverted %} <span class="badge disabled">reverted</span>{% endif %}
+    {% if h.note %}<br><span class="muted">{{ h.note }}</span>{% endif %}</p>
+{% else %}
+  <p class="muted">No changes recorded.</p>
+{% endfor %}

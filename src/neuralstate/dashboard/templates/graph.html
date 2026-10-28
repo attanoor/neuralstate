@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Graph · {{ agent.name }} · NeuralState{% endblock %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js" defer></script>
+{% endblock %}
+{% block content %}
+<h1>Knowledge graph</h1>
+<div class="legend" aria-hidden="true">
+  <span><i style="background: var(--accent)"></i>entity</span>
+  <span><i style="background: var(--good)"></i>fact</span>
+  <span><i style="background: var(--warn)"></i>disputed</span>
+  <span><i style="background: var(--muted)"></i>superseded / archived</span>
+</div>
+<div class="filters">
+  <label><input type="checkbox" id="inactive"> show superseded and archived</label>
+  <button class="btn" type="button" id="reset">Reset view</button>
+</div>
+<div class="graph-layout">
+  <div id="cy" role="img" aria-label="Interactive graph of the agent's entities and facts"></div>
+  <aside id="panel" class="card" aria-live="polite">
+    <p class="muted">Select a node to see its evidence and history. Double-click to focus on its neighborhood.</p>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+  const agent = {{ agent.name | tojson }};
+  const css = getComputedStyle(document.documentElement);
+  const color = (name) => css.getPropertyValue(name).trim() || "#888";
+  let cy;
+
+  function nodeColor(n) {
+    const status = n.data("status");
+    if (status === "superseded" || status === "archived") return color("--muted");
+    if (status === "pending_review") return color("--warn");
+    return n.data("kind") === "entity" ? color("--accent") : color("--good");
+  }
+
+  async function load(center) {
+    const params = new URLSearchParams({ agent, depth: "2" });
+    if (center) params.set("center", center);
+    if (document.getElementById("inactive").checked) params.set("include_inactive", "true");
+    const res = await fetch(`/ui/graph.json?${params}`);
+    const data = await res.json();
+    const elements = [
+      ...data.nodes.map((n) => ({ data: { ...n, size: 14 + Math.min(26, n.evidence_count * 3) } })),
+      ...data.edges.map((e) => ({ data: e })),
+    ];
+    if (cy) cy.destroy();
+    cy = cytoscape({
+      container: document.getElementById("cy"),
+      elements,
+      wheelSensitivity: 0.3,
+      style: [
+        { selector: "node", style: {
+            "background-color": nodeColor, width: "data(size)", height: "data(size)",
+            label: "data(label)", "font-size": 9, color: color("--text"), "text-wrap": "ellipsis",
+            "text-max-width": 140, "text-valign": "bottom", "text-margin-y": 4 } },
+        { selector: "node[kind = 'fact']", style: { shape: "round-rectangle" } },
+        { selector: "edge", style: {
+            width: 1, "line-color": color("--border"), "target-arrow-color": color("--border"),
+            "target-arrow-shape": "triangle", "curve-style": "bezier", label: "data(relation)",
+            "font-size": 7, color: color("--muted") } },
+        { selector: "edge[relation = 'supersedes']", style: { "line-style": "dashed", "line-color": color("--warn") } },
+        { selector: ":selected", style: { "border-width": 3, "border-color": color("--text") } },
+      ],
+      layout: { name: "cose", animate: false, nodeRepulsion: 9000, idealEdgeLength: 70 },
+    });
+    cy.on("tap", "node", (evt) => htmx.ajax("GET", `/ui/nodes/${evt.target.id()}`, "#panel"));
+    cy.on("dbltap", "node", (evt) => load(evt.target.id()));
+    if (!data.nodes.length) {
+      document.getElementById("panel").innerHTML =
+        '<p class="muted">No knowledge yet. Facts appear after the first consolidation cycle.</p>';
+    }
+  }
+
+  document.getElementById("inactive").addEventListener("change", () => load());
+  document.getElementById("reset").addEventListener("click", () => load());
+  addEventListener("load", () => load());
+</script>
+{% endblock %}

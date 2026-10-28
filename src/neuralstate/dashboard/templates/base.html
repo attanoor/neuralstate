@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}NeuralState{% endblock %}</title>
+  <link rel="stylesheet" href="/ui/static/app.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/2.0.4/htmx.min.js" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% set q = "?agent=" ~ (agent.name | urlencode) if agent else "" %}
+  <header class="topbar">
+    <a class="brand" href="/ui{{ q }}">Neural<span>State</span></a>
+    <nav aria-label="Main">
+      <ul class="nav">
+        {% for slug, label, href in [("overview", "Overview", "/ui"), ("graph", "Graph", "/ui/graph"),
+                                     ("rules", "Rules", "/ui/rules"), ("review", "Review queue", "/ui/review"),
+                                     ("events", "Audit log", "/ui/events")] %}
+          <li><a href="{{ href }}{{ q }}" {% if page == slug %}aria-current="page"{% endif %}>{{ label }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+    {% if agents %}
+      <form class="agent-picker" method="get">
+        <label for="agent-select">Agent</label>
+        <select id="agent-select" name="agent" onchange="this.form.submit()">
+          {% for a in agents %}
+            <option value="{{ a.name }}" {% if agent and a.id == agent.id %}selected{% endif %}>{{ a.name }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button class="btn" type="submit">Go</button></noscript>
+      </form>
+    {% endif %}
+  </header>
+  <main>
+    {% if not agent and page != "login" %}
+      <div class="card empty">
+        <p>No agents yet.</p>
+        <p>Create one with <code>POST /v1/agents</code>, or run <code>neuralstate demo</code>.</p>
+      </div>
+    {% else %}
+      {% block content %}{% endblock %}
+    {% endif %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

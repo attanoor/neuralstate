@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ agent.name }} · NeuralState{% endblock %}
+{% block content %}
+<h1>{{ agent.name }}</h1>
+<div class="grid">
+  <div class="card stat"><div class="value">{{ data.nodes.rule }}</div><div class="label">Active rules</div></div>
+  <div class="card stat"><div class="value">{{ data.nodes.fact }}</div><div class="label">Active facts</div></div>
+  <div class="card stat"><div class="value">{{ data.nodes.entity }}</div><div class="label">Entities</div></div>
+  <div class="card stat"><div class="value">{{ data.episodes.total }}</div><div class="label">Episodes recorded</div></div>
+  <div class="card stat"><div class="value">{{ data.episodes.unconsolidated }}</div><div class="label">Awaiting consolidation</div></div>
+  <div class="card stat">
+    <div class="value">{{ data.pending_review }}</div>
+    <div class="label"><a href="/ui/review?agent={{ agent.name | urlencode }}">Contradictions in review</a></div>
+  </div>
+</div>
+
+<h2>Outcomes</h2>
+<div class="grid">
+  {% for o in ["success", "failure", "partial", "unknown"] %}
+    <div class="card stat"><div class="value">{{ data.episodes.get(o, 0) }}</div>
+      <div class="label"><span class="badge {{ o }}">{{ o }}</span></div></div>
+  {% endfor %}
+</div>
+
+{% if data.rule_growth %}
+<h2>Rules learned per day</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Day</th><th scope="col">New rules</th></tr></thead>
+    <tbody>
+      {% for r in data.rule_growth %}
+        <tr><td data-label="Day">{{ r.day }}</td><td data-label="New rules">{{ r.rules }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<h2>Recent consolidation cycles</h2>
+{% if data.cycles %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Started</th><th scope="col">Kind</th><th scope="col">Result</th><th scope="col">Details</th></tr></thead>
+    <tbody>
+      {% for c in data.cycles %}
+        {% set st = c.stats %}
+        <tr>
+          <td data-label="Started">{{ c.started_at | when }}</td>
+          <td data-label="Kind">{{ c.kind }}</td>
+          <td data-label="Result">
+            {% if c.error %}<span class="badge failure">error</span> <span class="muted">{{ c.error | short(90) }}</span>
+            {% elif not c.finished_at %}<span class="badge pending">running</span>
+            {% else %}
+              {% if st.extract %}{{ st.extract.episodes_processed }} episodes · {{ st.extract.facts_created }} new facts · {% endif %}
+              {% if st.reconcile %}{{ st.reconcile.contradictions_auto_resolved + st.reconcile.contradictions_queued }} contradictions · {% endif %}
+              {{ st.synthesize.rules_created if st.synthesize else 0 }} new rules
+              {% if st.decay %} · {{ st.decay.nodes_archived }} archived{% endif %}
+            {% endif %}
+          </td>
+          <td data-label="Details"><details><summary>stats</summary><pre>{{ st | tojson_pretty }}</pre></details></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <p class="muted">No cycles yet. The worker runs one when enough episodes arrive, or trigger one with <code>POST /v1/consolidate</code>.</p>
+{% endif %}
+{% endblock %}

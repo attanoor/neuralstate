@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Audit log · {{ agent.name }} · NeuralState{% endblock %}
+{% block content %}
+<h1>Audit log</h1>
+<p class="muted">Every change consolidation (or an operator) made to memory. Reverting applies the inverse and logs that too.</p>
+{% set base = "/ui/events?agent=" ~ (agent.name | urlencode) %}
+<nav class="filters" aria-label="Filter by operation">
+  <a href="{{ base }}" {% if not op %}aria-current="true"{% endif %}>All</a>
+  {% for o in ["create", "merge", "supersede", "flag", "restore", "reinforce_rule", "retire_rule", "archive", "operator_edit", "revert"] %}
+    <a href="{{ base }}&op={{ o }}" {% if op == o %}aria-current="true"{% endif %}>{{ o }}</a>
+  {% endfor %}
+</nav>
+{% if events %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">#</th><th scope="col">When</th><th scope="col">Change</th><th scope="col">Detail</th><th scope="col"><span class="muted">Action</span></th></tr></thead>
+    <tbody>
+      {% for e in events %}{% include "_event_row.html" %}{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if events | length == 100 %}
+  <p><a class="btn" href="{{ base }}{% if op %}&op={{ op }}{% endif %}&before_id={{ events[-1].id }}">Older</a></p>
+{% endif %}
+{% else %}
+  <div class="card empty">No changes recorded yet.</div>
+{% endif %}
+{% endblock %}
